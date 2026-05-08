@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install iris3d ./deploy/kubernetes/helm \
+            --namespace iris3d-staging \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set ingress.host=staging.iris3d.example.com \
+            --set resources.gateway.replicas=1 \
+            --wait --timeout=10m
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/iris3d-gateway -n iris3d-staging
+          kubectl rollout status deployment/iris3d-inference -n iris3d-staging
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [deploy-staging]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Get Version from Tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install iris3d ./deploy/kubernetes/helm \
+            --namespace iris3d-production \
+            --create-namespace \
+            --set image.tag=${{ steps.version.outputs.VERSION }} \
+            --set ingress.host=iris3d.example.com \
+            --set resources.gateway.replicas=3 \
+            --set resources.inference.gpu.enabled=true \
+            --wait --timeout=15m
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/iris3d-gateway -n iris3d-production
+          kubectl rollout status deployment/iris3d-inference -n iris3d-production
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: |
+            deploy/kubernetes/helm/**
