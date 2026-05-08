@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # Python Inference Service with Triton
+  inference:
+    build:
+      context: ../python
+      dockerfile: Dockerfile
+    container_name: iris3d-inference
+    ports:
+      - "50052:50052"
+    volumes:
+      - ../models:/app/models:ro
+      - ../python/config.yaml:/app/config.yaml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CUDA_VISIBLE_DEVICES=0
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; grpc.insecure_channel('localhost:50052')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Go API Gateway with Connect Protocol
+  gateway:
+    build:
+      context: ..
+      dockerfile: go/Dockerfile
+    container_name: iris3d-gateway
+    ports:
+      - "8080:8080"   # Connect/HTTP
+      - "50051:50051" # gRPC
+      - "9090:9090"   # Prometheus metrics
+    environment:
+      - INFERENCE_HOST=inference:50052
+      - REDIS_HOST=redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - PORT=8080
+      - GRPC_PORT=50051
+      - METRICS_PORT=9090
+    depends_on:
+      inference:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: iris3d-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # WebGL Viewer
+  viewer:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+    container_name: iris3d-viewer
+    ports:
+      - "3000:80"
+    environment:
+      - IRIS3D_API_URL=http://localhost:8080
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: iris3d-otel
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+    restart: unless-stopped
+
+  # Jaeger for trace visualization
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: iris3d-jaeger
+    ports:
+      - "16686:16686" # Web UI
+      - "14268:14268" # HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: iris3d-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: iris3d-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=iris3d
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:

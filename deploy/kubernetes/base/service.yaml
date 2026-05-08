@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris3d-gateway
+  labels:
+    app: iris3d
+    component: gateway
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: grpc
+      port: 50051
+      targetPort: 50051
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: iris3d
+    component: gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris3d-inference
+  labels:
+    app: iris3d
+    component: inference
+spec:
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: 50052
+      targetPort: 50052
+  selector:
+    app: iris3d
+    component: inference
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris3d-redis
+  labels:
+    app: iris3d
+    component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis

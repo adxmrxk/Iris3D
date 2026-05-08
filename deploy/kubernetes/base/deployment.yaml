@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris3d-gateway
+  labels:
+    app: iris3d
+    component: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: iris3d
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app: iris3d
+        component: gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: gateway
+          image: iris3d/gateway:latest
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 50051
+            - name: metrics
+              containerPort: 9090
+          env:
+            - name: INFERENCE_HOST
+              value: "iris3d-inference:50052"
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: iris3d-config
+                  key: redis-host
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: iris3d-config
+                  key: otel-endpoint
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris3d-inference
+  labels:
+    app: iris3d
+    component: inference
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iris3d
+      component: inference
+  template:
+    metadata:
+      labels:
+        app: iris3d
+        component: inference
+    spec:
+      containers:
+        - name: inference
+          image: iris3d/inference:latest
+          ports:
+            - name: grpc
+              containerPort: 50052
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4000m"
+              memory: "8Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: models
+              mountPath: /app/models
+              readOnly: true
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: iris3d-models
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
