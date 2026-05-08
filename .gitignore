@@ -1,0 +1,57 @@
+# Claude
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Models (large files)
+models/*.onnx
+models/*.pt
+models/*.pth
+
+# Node
+node_modules/
+web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated
+go/gen/
+python/gen/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Kubernetes secrets
+**/secrets.yaml

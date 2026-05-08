@@ -1,0 +1,24 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/iris3d/go/gen
+plugins:
+  # Go protobuf
+  - remote: buf.build/protocolbuffers/go
+    out: go/gen
+    opt: paths=source_relative
+  # Go gRPC
+  - remote: buf.build/grpc/go
+    out: go/gen
+    opt: paths=source_relative
+  # Connect Go
+  - remote: buf.build/connectrpc/go
+    out: go/gen
+    opt: paths=source_relative
+  # Python
+  - remote: buf.build/protocolbuffers/python
+    out: python/gen
+  - remote: buf.build/grpc/python
+    out: python/gen
