@@ -1,0 +1,44 @@
+# Core ML dependencies
+torch>=2.1.0
+torchvision>=0.16.0
+timm>=0.9.0
+
+# Depth models
+transformers>=4.36.0
+
+# ONNX export and runtime
+onnx>=1.15.0
+onnxruntime>=1.16.0
+onnxruntime-gpu>=1.16.0  # Optional: for GPU inference
+
+# Point cloud processing
+open3d>=0.18.0
+scipy>=1.11.0
+
+# Image processing
+numpy>=1.24.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0
+
+# Configuration
+PyYAML>=6.0
+
+# Observability
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-exporter-otlp>=1.21.0
+opentelemetry-instrumentation-grpc>=0.42b0
+prometheus-client>=0.19.0
+
+# Caching
+redis>=5.0.0
+
+# Development
+pytest>=7.4.0
+pytest-cov>=4.1.0
+ruff>=0.1.0

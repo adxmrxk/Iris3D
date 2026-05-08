@@ -1,0 +1,35 @@
+# Iris3D Python Inference Service Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 50052
+  max_workers: 4
+
+model:
+  # Path to ONNX model file
+  path: "/app/models/midas_v31_dpt_large.onnx"
+  # Input size for MiDaS (must match export settings)
+  input_height: 384
+  input_width: 384
+  # Use GPU if available
+  use_gpu: true
+
+camera:
+  # Default camera intrinsics (can be overridden per-request)
+  # These defaults assume focal_length = image_width (common approximation)
+  # and principal point at image center
+  defaults:
+    # Set to 0 to auto-compute from image dimensions
+    focal_length_x: 0
+    focal_length_y: 0
+    principal_point_x: 0
+    principal_point_y: 0
+
+depth:
+  # MiDaS outputs inverse depth; scale factor for metric depth
+  # Adjust based on your scene scale requirements
+  scale_factor: 1.0
+  # Minimum depth threshold to filter noise
+  min_depth: 0.1
+  # Maximum depth threshold
+  max_depth: 100.0
