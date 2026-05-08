@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iris3D Viewer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      overflow: hidden;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+    #controls {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 300px;
+    }
+    #controls h1 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      color: #4fc3f7;
+    }
+    .control-group {
+      margin-bottom: 15px;
+    }
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    .control-group input[type="file"] {
+      width: 100%;
+    }
+    .control-group input[type="range"] {
+      width: 100%;
+    }
+    .control-group select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #4fc3f7;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #29b6f6;
+    }
+    button:disabled {
+      background: #555;
+      color: #888;
+      cursor: not-allowed;
+    }
+    #stats {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    #stats div {
+      margin-bottom: 5px;
+    }
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 30px 50px;
+      border-radius: 8px;
+      display: none;
+    }
+    #loading.visible {
+      display: block;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #333;
+      border-top: 4px solid #4fc3f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="controls">
+    <h1>Iris3D Viewer</h1>
+
+    <div class="control-group">
+      <label>Upload Image</label>
+      <input type="file" id="image-input" accept="image/*">
+    </div>
+
+    <div class="control-group">
+      <label>Depth Model</label>
+      <select id="model-select">
+        <option value="DEPTH_MODEL_DEPTH_ANYTHING_V2">Depth Anything v2 (Best)</option>
+        <option value="DEPTH_MODEL_ZOEDEPTH">ZoeDepth (Metric)</option>
+        <option value="DEPTH_MODEL_MIDAS">MiDaS (Fast)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Point Size: <span id="point-size-value">2</span></label>
+      <input type="range" id="point-size" min="1" max="10" value="2">
+    </div>
+
+    <div class="control-group">
+      <label>Voxel Size: <span id="voxel-size-value">0.01</span></label>
+      <input type="range" id="voxel-size" min="0.001" max="0.1" step="0.001" value="0.01">
+    </div>
+
+    <button id="process-btn" disabled>Generate 3D</button>
+    <button id="download-btn" disabled>Download PLY</button>
+  </div>
+
+  <div id="stats">
+    <div>Points: <span id="stat-points">-</span></div>
+    <div>Inference: <span id="stat-inference">-</span></div>
+    <div>Total: <span id="stat-total">-</span></div>
+    <div>FPS: <span id="stat-fps">-</span></div>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Processing...</div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
