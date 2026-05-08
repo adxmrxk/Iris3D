@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Python Inference Service
+  # Handles depth estimation and 3D projection
+  inference:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: iris3d-inference
+    ports:
+      - "50052:50052"
+    volumes:
+      # Mount models directory for persistence
+      - ./models:/app/models:ro
+      # Mount config for easy updates
+      - ./python/config.yaml:/app/config.yaml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    # GPU support (uncomment for NVIDIA GPU)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; channel = grpc.insecure_channel('localhost:50052'); grpc.channel_ready_future(channel).result(timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Go API Gateway
+  # Public-facing gRPC service with downsampling and PLY generation
+  gateway:
+    build:
+      context: .
+      dockerfile: go/Dockerfile
+    container_name: iris3d-gateway
+    ports:
+      - "50051:50051"
+    environment:
+      - INFERENCE_HOST=inference:50052
+      - PORT=50051
+    depends_on:
+      inference:
+        condition: service_healthy
+    restart: unless-stopped
+
+# Named volumes for persistent data
+volumes:
+  models:
+    driver: local
