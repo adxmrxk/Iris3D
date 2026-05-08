@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package iris3d.v1;
+
+option go_package = "github.com/iris3d/go/gen/iris3d/v1;iris3dv1";
+
+// DepthModel specifies the depth estimation model
+enum DepthModel {
+  DEPTH_MODEL_UNSPECIFIED = 0;
+
+  // MiDaS v3.1 DPT-Large - Fast, relative depth
+  // Best for: Real-time applications, general use
+  // Latency: ~30ms GPU, ~200ms CPU
+  DEPTH_MODEL_MIDAS = 1;
+
+  // ZoeDepth - Metric depth estimation
+  // Best for: When actual distances matter
+  // Latency: ~50ms GPU
+  DEPTH_MODEL_ZOEDEPTH = 2;
+
+  // Depth Anything v2 - State-of-the-art quality
+  // Best for: Maximum accuracy, fine details
+  // Latency: ~40ms GPU
+  DEPTH_MODEL_DEPTH_ANYTHING_V2 = 3;
+
+  // Depth Anything v2 Small - Faster variant
+  // Best for: Balance of speed and quality
+  // Latency: ~20ms GPU
+  DEPTH_MODEL_DEPTH_ANYTHING_V2_SMALL = 4;
+}
+
+// DepthConfig for depth estimation parameters
+message DepthConfig {
+  // Scale factor for depth values
+  float scale_factor = 1;
+
+  // Minimum depth threshold (filter noise)
+  float min_depth = 2;
+
+  // Maximum depth threshold
+  float max_depth = 3;
+
+  // Apply bilateral filtering for edge preservation
+  bool bilateral_filter = 4;
+
+  // Invert depth values (some models output inverse depth)
+  bool invert_depth = 5;
+}
+
+// DepthMap represents a depth image
+message DepthMap {
+  // Raw depth values as float32
+  bytes data = 1;
+
+  // Dimensions
+  int32 width = 2;
+  int32 height = 3;
+
+  // Whether values are metric (meters) or relative
+  bool is_metric = 4;
+
+  // Min/max depth in the map
+  float min_value = 5;
+  float max_value = 6;
+
+  // Model used to generate this depth map
+  DepthModel model = 7;
+}

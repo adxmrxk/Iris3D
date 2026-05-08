@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package iris3d.v1;
+
+option go_package = "github.com/iris3d/go/gen/iris3d/v1;iris3dv1";
+
+// SegmentationConfig for SAM integration
+message SegmentationConfig {
+  // Enable segmentation
+  bool enabled = 1;
+
+  // Use automatic mask generation (no prompts needed)
+  bool automatic = 2;
+
+  // Point prompts (click points)
+  repeated Point2D point_prompts = 3;
+
+  // Point labels (1 = foreground, 0 = background)
+  repeated int32 point_labels = 4;
+
+  // Box prompt for region of interest
+  BoundingBox2D box_prompt = 5;
+
+  // Only reconstruct foreground objects
+  bool foreground_only = 6;
+
+  // Minimum mask area (filter small masks)
+  int32 min_mask_area = 7;
+
+  // Predicted IoU threshold
+  float pred_iou_thresh = 8;
+
+  // Stability score threshold
+  float stability_score_thresh = 9;
+}
+
+// Point2D for 2D coordinates
+message Point2D {
+  float x = 1;
+  float y = 2;
+}
+
+// BoundingBox2D for 2D regions
+message BoundingBox2D {
+  float min_x = 1;
+  float min_y = 2;
+  float max_x = 3;
+  float max_y = 4;
+}
+
+// SegmentImageRequest for standalone segmentation
+message SegmentImageRequest {
+  bytes image_data = 1;
+  string format = 2;
+  int32 width = 3;
+  int32 height = 4;
+  SegmentationConfig config = 5;
+}
+
+// SegmentImageResponse with segmentation results
+message SegmentImageResponse {
+  repeated SegmentationMask masks = 1;
+  ProcessingTime timing = 2;
+}
+
+// SegmentationMask represents a single segmentation result
+message SegmentationMask {
+  // Mask ID
+  int32 id = 1;
+
+  // Binary mask data (1 byte per pixel, 0 or 255)
+  bytes mask_data = 2;
+
+  // Mask dimensions
+  int32 width = 3;
+  int32 height = 4;
+
+  // Bounding box of the mask
+  BoundingBox2D bounding_box = 5;
+
+  // Predicted IoU score
+  float predicted_iou = 6;
+
+  // Stability score
+  float stability_score = 7;
+
+  // Area in pixels
+  int32 area = 8;
+
+  // Crop box used for this mask
+  BoundingBox2D crop_box = 9;
+
+  // Point coordinates that prompted this mask (if any)
+  Point2D point_prompt = 10;
+}
+
+// ProcessingTime for segmentation timing
+message ProcessingTime {
+  float encoding_time_ms = 1;
+  float mask_generation_time_ms = 2;
+  float total_time_ms = 3;
+}

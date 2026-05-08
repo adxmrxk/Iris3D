@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package iris3d.v1;
+
+option go_package = "github.com/iris3d/go/gen/iris3d/v1;iris3dv1";
+
+// PointCloudResult contains processed point cloud data
+message PointCloudResult {
+  // Point cloud data in requested format
+  bytes data = 1;
+
+  // Output format used
+  string format = 2;
+
+  // Number of points
+  int32 num_points = 3;
+
+  // Points before any downsampling
+  int32 original_num_points = 4;
+
+  // For video: frame identifier
+  int32 frame_id = 5;
+
+  // Bounding box of the point cloud
+  BoundingBox3D bounding_box = 6;
+
+  // Processing statistics
+  ProcessingStats stats = 7;
+
+  // Whether normals are included
+  bool has_normals = 8;
+
+  // Whether colors are included
+  bool has_colors = 9;
+}
+
+// BoundingBox3D for point cloud bounds
+message BoundingBox3D {
+  float min_x = 1;
+  float min_y = 2;
+  float min_z = 3;
+  float max_x = 4;
+  float max_y = 5;
+  float max_z = 6;
+}
+
+// ProcessingStats contains timing information
+message ProcessingStats {
+  float inference_time_ms = 1;
+  float projection_time_ms = 2;
+  float filtering_time_ms = 3;
+  float normal_estimation_time_ms = 4;
+  float downsampling_time_ms = 5;
+  float meshing_time_ms = 6;
+  float total_time_ms = 7;
+
+  // Cache hit indicator
+  bool cache_hit = 8;
+}
+
+// VoxelConfig for voxel grid downsampling
+message VoxelConfig {
+  // Enable downsampling
+  bool enabled = 1;
+
+  // Voxel cell size (in scene units)
+  float voxel_size = 2;
+
+  // Use centroid of points in voxel (more accurate but slower)
+  bool use_centroid = 3;
+}
+
+// OutlierRemovalConfig for statistical outlier removal
+message OutlierRemovalConfig {
+  // Enable outlier removal
+  bool enabled = 1;
+
+  // Number of neighbors to analyze
+  int32 nb_neighbors = 2;
+
+  // Standard deviation ratio threshold
+  float std_ratio = 3;
+}
+
+// NormalEstimationConfig for surface normal computation
+message NormalEstimationConfig {
+  // Enable normal estimation
+  bool enabled = 1;
+
+  // Search radius for neighbors
+  float radius = 2;
+
+  // Maximum number of neighbors
+  int32 max_nn = 3;
+
+  // Orient normals towards camera
+  bool orient_to_camera = 4;
+}
+
+// GenerateMeshRequest for mesh generation
+message GenerateMeshRequest {
+  // Point cloud data
+  bytes point_cloud_data = 1;
+
+  // Point cloud format
+  string format = 2;
+
+  // Number of points
+  int32 num_points = 3;
+
+  // Mesh generation config
+  MeshGenerationConfig config = 4;
+}
+
+// MeshGenerationConfig for Poisson surface reconstruction
+message MeshGenerationConfig {
+  // Enable mesh generation
+  bool enabled = 1;
+
+  // Octree depth (higher = more detail, 8-12 typical)
+  int32 depth = 2;
+
+  // Scale factor for reconstruction
+  float scale = 3;
+
+  // Minimum density threshold for trimming
+  float density_threshold = 4;
+
+  // Simplify mesh to target triangle count (0 = no simplification)
+  int32 target_triangles = 5;
+
+  // Smooth the mesh after reconstruction
+  bool smooth = 6;
+
+  // Number of smoothing iterations
+  int32 smooth_iterations = 7;
+}
+
+// MeshResponse contains generated mesh data
+message MeshResponse {
+  MeshData mesh = 1;
+  ProcessingStats stats = 2;
+}
+
+// MeshData represents a 3D mesh
+message MeshData {
+  // Mesh data (OBJ, PLY, or STL format)
+  bytes data = 1;
+
+  // Output format
+  string format = 2;
+
+  // Number of vertices
+  int32 num_vertices = 3;
+
+  // Number of triangles
+  int32 num_triangles = 4;
+
+  // Mesh has texture coordinates
+  bool has_uvs = 5;
+
+  // Texture image (if applicable)
+  bytes texture_data = 6;
+}

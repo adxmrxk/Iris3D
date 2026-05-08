@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package iris3d;
+
+option go_package = "github.com/iris3d/go/proto";
+
+// Public API - exposed by Go gateway
+service Iris3D {
+  // Process a single image and return a point cloud
+  rpc ProcessImage(ImageRequest) returns (PointCloudResponse);
+
+  // Process video frames as a bidirectional stream
+  rpc ProcessVideoStream(stream VideoFrame) returns (stream PointCloudResponse);
+}
+
+// Internal API - exposed by Python inference service
+service InferenceService {
+  // Run depth estimation and 3D projection on a single image
+  rpc Infer(InferenceRequest) returns (InferenceResponse);
+}
+
+// Camera intrinsic parameters for pinhole model
+message CameraIntrinsics {
+  float focal_length_x = 1;   // fx - focal length in x (pixels)
+  float focal_length_y = 2;   // fy - focal length in y (pixels)
+  float principal_point_x = 3; // cx - principal point x (usually width/2)
+  float principal_point_y = 4; // cy - principal point y (usually height/2)
+}
+
+// Request to process a single image
+message ImageRequest {
+  bytes image_data = 1;              // Encoded image (JPEG/PNG) or raw RGB bytes
+  string format = 2;                 // "jpeg", "png", or "raw"
+  int32 width = 3;                   // Required if format is "raw"
+  int32 height = 4;                  // Required if format is "raw"
+  CameraIntrinsics intrinsics = 5;   // Optional: override server defaults
+  DownsamplingConfig downsampling = 6; // Optional: voxel downsampling settings
+}
+
+// Video frame for streaming
+message VideoFrame {
+  bytes image_data = 1;              // Encoded frame data
+  string format = 2;                 // "jpeg", "png", or "raw"
+  int32 width = 3;                   // Frame width
+  int32 height = 4;                  // Frame height
+  int32 frame_id = 5;                // Sequence number for ordering
+  int64 timestamp_ms = 6;            // Capture timestamp in milliseconds
+  CameraIntrinsics intrinsics = 7;   // Optional: per-frame camera params
+  DownsamplingConfig downsampling = 8;
+}
+
+// Voxel downsampling configuration
+message DownsamplingConfig {
+  bool enabled = 1;                  // Whether to apply downsampling
+  float voxel_size = 2;              // Size of voxel grid cells (default: 0.01)
+}
+
+// Response containing the generated point cloud
+message PointCloudResponse {
+  bytes ply_data = 1;                // Binary PLY file data
+  int32 num_points = 2;              // Number of points in the cloud
+  int32 original_points = 3;         // Points before downsampling
+  int32 frame_id = 4;                // For video: matches input frame_id
+  ProcessingStats stats = 5;         // Performance metrics
+}
+
+// Performance statistics
+message ProcessingStats {
+  float inference_time_ms = 1;       // Depth estimation time
+  float projection_time_ms = 2;      // 3D projection time
+  float downsampling_time_ms = 3;    // Voxel downsampling time
+  float total_time_ms = 4;           // Total processing time
+}
+
+// Internal: Request to Python inference service
+message InferenceRequest {
+  bytes image_data = 1;              // Encoded image data
+  string format = 2;                 // Image format
+  int32 width = 3;                   // Image width (for raw format)
+  int32 height = 4;                  // Image height (for raw format)
+  CameraIntrinsics intrinsics = 5;   // Camera parameters
+}
+
+// Internal: Response from Python inference service
+message InferenceResponse {
+  bytes point_cloud_data = 1;        // Raw point cloud: Nx6 float32 [X,Y,Z,R,G,B]
+  int32 num_points = 2;              // Number of points
+  int32 image_width = 3;             // Original image width
+  int32 image_height = 4;            // Original image height
+  float inference_time_ms = 5;       // Depth estimation time
+  float projection_time_ms = 6;      // 3D projection time
+}

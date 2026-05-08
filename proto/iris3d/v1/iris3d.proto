@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package iris3d.v1;
+
+option go_package = "github.com/iris3d/go/gen/iris3d/v1;iris3dv1";
+
+import "iris3d/v1/depth.proto";
+import "iris3d/v1/pointcloud.proto";
+import "iris3d/v1/segmentation.proto";
+
+// Iris3DService provides 3D reconstruction from 2D images
+service Iris3DService {
+  // ProcessImage converts a single image to a 3D point cloud
+  rpc ProcessImage(ProcessImageRequest) returns (ProcessImageResponse);
+
+  // ProcessVideoStream handles real-time video to point cloud conversion
+  rpc ProcessVideoStream(stream VideoFrame) returns (stream PointCloudResult);
+
+  // GenerateMesh creates a mesh from a point cloud
+  rpc GenerateMesh(GenerateMeshRequest) returns (MeshResponse);
+
+  // SegmentImage performs instance segmentation using SAM
+  rpc SegmentImage(SegmentImageRequest) returns (SegmentImageResponse);
+
+  // GetModels returns available depth estimation models
+  rpc GetModels(GetModelsRequest) returns (GetModelsResponse);
+
+  // Health check endpoint
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// ProcessImageRequest for single image processing
+message ProcessImageRequest {
+  // Raw image bytes (JPEG, PNG, or raw RGB)
+  bytes image_data = 1;
+
+  // Image format: "jpeg", "png", or "raw"
+  string format = 2;
+
+  // Image dimensions (required for raw format)
+  int32 width = 3;
+  int32 height = 4;
+
+  // Depth estimation model to use
+  DepthModel model = 5;
+
+  // Processing options
+  ProcessingOptions options = 6;
+
+  // Camera intrinsic parameters (optional)
+  CameraIntrinsics intrinsics = 7;
+
+  // Request ID for tracing
+  string request_id = 8;
+}
+
+// ProcessImageResponse contains the generated point cloud
+message ProcessImageResponse {
+  // Point cloud result
+  PointCloudResult result = 1;
+
+  // Depth map as grayscale image (optional)
+  bytes depth_map = 2;
+
+  // Generated mesh (if requested)
+  MeshData mesh = 3;
+
+  // Segmentation masks (if requested)
+  repeated SegmentationMask masks = 4;
+}
+
+// VideoFrame for streaming input
+message VideoFrame {
+  bytes image_data = 1;
+  string format = 2;
+  int32 width = 3;
+  int32 height = 4;
+  int32 frame_id = 5;
+  int64 timestamp_ms = 6;
+  DepthModel model = 7;
+  ProcessingOptions options = 8;
+  CameraIntrinsics intrinsics = 9;
+}
+
+// ProcessingOptions configures the processing pipeline
+message ProcessingOptions {
+  // Voxel downsampling configuration
+  VoxelConfig downsampling = 1;
+
+  // Statistical outlier removal
+  OutlierRemovalConfig outlier_removal = 2;
+
+  // Normal estimation
+  NormalEstimationConfig normal_estimation = 3;
+
+  // Mesh generation (Poisson reconstruction)
+  MeshGenerationConfig mesh_generation = 4;
+
+  // Segmentation configuration
+  SegmentationConfig segmentation = 5;
+
+  // Output format: "ply_binary", "ply_ascii", "pcd", "xyz"
+  string output_format = 6;
+
+  // Include vertex colors in output
+  bool include_colors = 7;
+
+  // Include vertex normals in output
+  bool include_normals = 8;
+}
+
+// CameraIntrinsics for pinhole camera model
+message CameraIntrinsics {
+  float focal_length_x = 1;  // fx
+  float focal_length_y = 2;  // fy
+  float principal_point_x = 3;  // cx
+  float principal_point_y = 4;  // cy
+
+  // Distortion coefficients (optional, for undistortion)
+  repeated float distortion_coeffs = 5;
+}
+
+// GetModelsRequest for listing available models
+message GetModelsRequest {}
+
+// GetModelsResponse with model information
+message GetModelsResponse {
+  repeated ModelInfo models = 1;
+}
+
+// ModelInfo describes an available depth model
+message ModelInfo {
+  DepthModel model = 1;
+  string name = 2;
+  string description = 3;
+  bool is_metric = 4;  // True if model outputs metric depth
+  int32 recommended_input_size = 5;
+  float estimated_latency_ms = 6;
+}
+
+// HealthRequest for health checks
+message HealthRequest {}
+
+// HealthResponse with service status
+message HealthResponse {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_SERVING = 1;
+    STATUS_NOT_SERVING = 2;
+  }
+  Status status = 1;
+  map<string, string> details = 2;
+}
